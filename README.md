@@ -1,15 +1,16 @@
-# GitHack
+# GitHackForPython3
 
 > `.git` 泄漏利用工具，可还原历史版本
+> 主要修改 `git.py` `request.py`,适配Python3
 
 ### 依赖
 
 > 不需要安装其它 Python 库，只需要有 git 命令
 
 * git
-    * ubuntu/debian: `$ apt-get install git`
-    * redhat/centos: `$ yum install git`
-    * windows [git-for-windows下载](https://github.com/git-for-windows/git/releases/latest)
+  * ubuntu/debian: `$ apt-get install git`
+  * redhat/centos: `$ yum install git`
+  * windows [git-for-windows下载](https://github.com/git-for-windows/git/releases/latest)
 
 **使用前需确保 git 在 环境变量中**
 
@@ -26,10 +27,6 @@ python GitHack.py http://www.example.com/.git/
 1. 尝试获取 `packs`克隆
 2. 尝试目录遍历克隆
 3. 尝试从缓存文件(index)、commit记录中恢复
-
-### 截图
-
-![](http://7xtigg.com1.z0.glb.clouddn.com/githack.png)
 
 ### 相关链接
 

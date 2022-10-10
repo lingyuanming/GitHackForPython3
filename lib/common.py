@@ -8,7 +8,6 @@ See the file 'LICENCE' for copying permission
 
 import sys
 import os
-# import urlparse
 from urllib.parse import urlparse
 from lib.data import logger
 from lib.data import paths
@@ -60,9 +59,9 @@ def setPaths(url):
 def mkdir_p(path):
     if not os.path.exists(path):
         os.makedirs(path)
-        # logger.info("Create Directory: %s" % (path))
-    # else:
-        # logger.info("Directory Exists: %s " % (path))
+        logger.info("Create Directory: %s" % (path))
+    else:
+        logger.info("Directory Exists: %s " % (path))
 
 
 def initDirs():
@@ -78,7 +77,7 @@ def initAgents():
 
 
 def readFile(filename:str)->bytes:
-    # fileObject = open(filename)
+
     try:
         with open(filename, "rb") as f:
             retVal = f.read()
@@ -96,4 +95,4 @@ def writeFile(filename: str, data:bytes):
     except IOError as ex:
         errMsg = "something went wrong while trying to write "
         errMsg += "to the output file ('%s')" % ex
-        # raise IOError(errMsg)
+        
