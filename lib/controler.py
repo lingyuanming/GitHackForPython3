@@ -18,12 +18,15 @@ from lib.git import init
 from lib.git import refresh_files
 
 def start():
-    if method_a() or method_b() or method_c():
+    if method_a() or method_b() or method_c():  
         job_success()
     else:
         job_fail()
 
 def method_a():
+    '''
+        git clone ****.git
+    '''
     logger.info("Try to Clone straightly")
     git_dir = os.path.join(paths.GITHACK_DIST_TARGET_PATH, ".git")
     if os.path.exists(git_dir):
@@ -32,6 +35,9 @@ def method_a():
     return clone()
 
 def method_b():
+    '''
+        尝试遍历目录--URL/.git/
+    '''
     logger.info("Try to Clone with Directory Listing")
     if isdirlist():
         try:
@@ -49,6 +55,9 @@ def method_b():
     return False
 
 def method_c():
+    '''
+        尝试从指定URL获取单个获取文件
+    '''
     logger.info("Try to clone with Cache")
     git_dir = os.path.join(paths.GITHACK_DIST_TARGET_PATH, ".git")
     if not os.path.exists(git_dir):

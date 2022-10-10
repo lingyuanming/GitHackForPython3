@@ -38,7 +38,8 @@ def init():
 
 def clone():
     logger.info("Clone")
-    cmd = "git clone %s %s" % (target.TARGET_GIT_URL, paths.GITHACK_DIST_TARGET_PATH)
+    cmd = "git clone %s %s" % (
+        target.TARGET_GIT_URL, paths.GITHACK_DIST_TARGET_PATH)
     # process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     # stdout, stderr = process.communicate()
     # process.wait()
@@ -70,7 +71,7 @@ def clone_from_list(name):
     if tmppath[-1] == "/" and not os.path.exists(tmppath):
         os.makedirs(tmppath)
     if not os.path.isdir(tmppath):
-        readorwget(name)
+        read_or_wget(name)
         return
     page = request_data("%s%s" % (target.TARGET_GIT_URL, name))
     files = re.findall('<a href="(.+?)"', page, re.M | re.I)
@@ -82,41 +83,46 @@ def clone_from_list(name):
 
 
 def refresh_files():
-    readorwget("packed-refs", True)
-    readorwget("config", True)
-    readorwget("HEAD", True)
+    read_or_wget("packed-refs", True)
+    read_or_wget("config", True)
+    read_or_wget("HEAD", True)
 
 
 def clone_from_cache():
     logger.info("Cache files")
     refresh_files()
-    readorwget("COMMIT_EDITMSG")
-    readorwget("ORIG_HEAD")
-    readorwget("description")
-    readorwget("info/exclude")
-    readorwget("FETCH_HEAD")
-    readorwget("refs/heads/master")
-    readorwget("refs/remote/master")
-    refs = readorwget("HEAD")[5:-1]
-    readorwget("index")
-    readorwget("logs/HEAD", True)
-    HEAD_HASH = readorwget(refs)
-    readorwget("logs/refs/heads/%s" % (refs.split("/")[-1]))
-    
+
+    read_or_wget("COMMIT_EDITMSG")
+    read_or_wget("ORIG_HEAD")
+    read_or_wget("description")
+    read_or_wget("info/exclude")
+    read_or_wget("FETCH_HEAD")
+    read_or_wget("refs/heads/master")
+    read_or_wget("refs/remote/master")
+
+    refs = read_or_wget("HEAD")[5:-1] # refs = b"refs/heads/master"
+
+    read_or_wget("index")
+    read_or_wget("logs/HEAD", True)
+
+    HEAD_HASH = read_or_wget(refs.decode()) #HEAD_HASH = read_or_wget()
+ 
+    read_or_wget("logs/refs/heads/%s" % (refs.split(b"/")[-1].decode()))  # read_or_wget ("/logs/refs/heads/master")
+
     if HEAD_HASH:
-        cache_commits(HEAD_HASH.replace("\n", ""))
+        cache_commits(HEAD_HASH.replace(b"\n", b""))  #
 
-    readorwget("logs/refs/remote/master")
-    readorwget("logs/refs/stash")
+    read_or_wget("logs/refs/remote/master")
+    read_or_wget("logs/refs/stash")
     # 下载 stash
-    STASH_HASH = readorwget("refs/stash")
-    if STASH_HASH:
-        cache_commits(STASH_HASH.replace("\n", ""))
-
+    if read_or_wget("refs/stash"):
+        STASH_HASH = read_or_wget("refs/stash")
+        cache_commits(STASH_HASH.replace(b"\n", b""))
+        
     cache_objects()
 
 
-def readorwget(filename, refresh=False):
+def read_or_wget(filename:str, refresh: bool = False)->bytes|None:
     filepath = os.path.join(paths.GITHACK_DIST_TARGET_GIT_PATH, filename)
     if refresh or not os.path.exists(filepath):
         logger.info(filename)
@@ -131,7 +137,8 @@ def readorwget(filename, refresh=False):
 
 def parse_refs(data):
     try:
-        fetch_heads = re.findall(r'([a-z0-9]{40})\trefs/heads/(.+?)\n', data, re.M)
+        fetch_heads = re.findall(
+            r'([a-z0-9]{40})\trefs/heads/(.+?)\n', data, re.M)
         FETCH_HEAD = ""
         for index in fetch_heads:
             writeFile(
@@ -139,7 +146,8 @@ def parse_refs(data):
                     paths.GITHACK_DIST_TARGET_GIT_PATH,
                     "refs/remotes/origin/%s" % str(index[1])
                 ), "%s\n" % (index[0]))
-            FETCH_HEAD += "%s\tnot-for-merge\t'%s' of %s\n" % (index[0], index[1], target.TARGET_GIT_URL[:-5])
+            FETCH_HEAD += "%s\tnot-for-merge\t'%s' of %s\n" % (
+                index[0], index[1], target.TARGET_GIT_URL[:-5])
 
         config = """[core]
         repositoryformatversion = 0
@@ -152,63 +160,61 @@ def parse_refs(data):
         url = %s
         fetch = +refs/heads/*:refs/remotes/origin/*
     """ % (target.TARGET_GIT_URL[:-1])
-        writeFile(os.path.join(paths.GITHACK_DIST_TARGET_GIT_PATH, "config"), config)
+        writeFile(os.path.join(
+            paths.GITHACK_DIST_TARGET_GIT_PATH, "config"), config)
     except:
         logger.warning("Parse refs Fail")
 
 
 def clone_pack():
     logger.info("Clone pack data.")
-    packdata = readorwget("objects/info/packs")
+    packdata = read_or_wget("objects/info/packs")
     if packdata:
         packs = re.findall('P pack-([a-z0-9]{40}).pack\n', packdata)
         for pack in packs:
-            readorwget("objects/pack/pack-%s.idx" % (pack))
-            readorwget("objects/pack/pack-%s.pack" % (pack))
+            read_or_wget("objects/pack/pack-%s.idx" % (pack))
+            read_or_wget("objects/pack/pack-%s.pack" % (pack))
     logger.info("Clone pack data end.")
 
 
-def cache_commits(starthash):
+def cache_commits(cmt_hash: bytes):
     logger.info("Fetch Commit Objects")
-    indexhash = [starthash]
+    indexhash = [cmt_hash]
     while indexhash:
-        tmp = []
-        for i in indexhash:
+        tmp = []  
+        for item in indexhash:
             if DEBUG:
-                logger.info("Fetch Commit Objects: %s" % i)
-            data = get_objects(i)
+                logger.info("Fetch Commit Objects: %s" % item.decode())
+            obj = get_objects(item)  #
+
             try:
-                objdata = zlib.decompress(data)
-                if objdata[:4] == 'tree':
-                    trees = parse_tree(objdata[objdata.find('\x00') + 1:])
+                obj_data = zlib.decompress(obj) 
+                if obj_data[:4] == b'tree':
+                    trees = parse_tree(obj_data[obj_data.find(b'\x00') + 1:]) 
                     tmp.extend(trees)
-            except:
-                pass
-            (obj, parents) = parse_commit(data, i)
-            if parents:
-                tmp.extend(parents)
-            if obj is None:
-                continue
-            data = get_objects(obj)
-            try:
-                objdata = zlib.decompress(data)
-                if objdata[:4] == 'tree':
-                    trees = parse_tree(objdata[objdata.find('\x00') + 1:])
-                    tmp.extend(trees)
-            except:
-                pass
+            except Exception as e:
+                logger.error(e)
+            else:
+                (tree_hash, parents_hash_list) = parse_commit(obj, item)
+                if tree_hash:
+                    tmp.append(tree_hash)
+                if parents_hash_list:
+                    tmp.extend(parents_hash_list)
         indexhash = tmp
     logger.info("Fetch Commit Objects End")
 
 
-def parse_tree(text, strict=False):
+def parse_tree(text:bytes, strict=False)->list: 
     count = 0
     retVal = []
     l = len(text)
     while count < l:
         mode_end = text.index(b' ', count)
-        mode_text = text[count:mode_end]
-        if strict and mode_text.startswith(b'0'):
+        mode_text = text[count:mode_end]  
+        '''
+            文件mode:16 bits(去掉高位的0) e.g 004000(8进制)->文件夹   100644(8进制)->普通文件，可读写
+        '''
+        if strict and mode_text.startswith(b'0'):#
             logger.warning("Invalid mode '%s'" % mode_text)
             break
         try:
@@ -229,35 +235,40 @@ def parse_tree(text, strict=False):
     return retVal
 
 
-def sha_to_hex(sha):
+def sha_to_hex(sha:bytes) -> bytes:
     """Takes a string and returns the hex of the sha within"""
     hexsha = binascii.hexlify(sha)
     assert len(hexsha) == 40, "Incorrect length of sha1 string: %d" % hexsha
     return hexsha
 
 
-def parse_commit(data, commithash):
-    obj = None
+def parse_commit(cmt_obj: bytes, cmt_hash: bytes) -> tuple:
+    tree_hash = None
     try:
-        de_data = zlib.decompress(data)
+        cmt_data = zlib.decompress(cmt_obj)
         m = re.search(
-            'commit \d+?\x00tree ([a-z0-9]{40})\n', de_data, re.M | re.S | re.I)
+            b'commit \d+?\x00tree ([a-z0-9]{40})\n', cmt_data, re.M | re.S | re.I)
         if m:
-            obj = m.group(1)
-        parents = re.findall('parent ([a-z0-9]{40})\n', de_data, re.M | re.S | re.I)
+            tree_hash = m.group(1)
+            if tree_hash:
+                logger.info("Get tree_hash from commit : %s" % (tree_hash.decode()))
+            else:
+                logger.info()
+        parents_hash_list = re.findall(
+            b'parent ([a-z0-9]{40})\n', cmt_data, re.M | re.S | re.I)
     except:
-        parents = []
+        parents_hash_list = []
         if DEBUG:
-            logger.warning("Decompress Commit(%s) Fail" % commithash)
-    return (obj, parents)
+            logger.warning("Decompress Commit(%s) Fail" % cmt_hash)
+    return (tree_hash, parents_hash_list)
 
 
-def get_objects(objhash):
+def get_objects(obj_hash: bytes)->bytes:
     folder = os.path.join(
-        paths.GITHACK_DIST_TARGET_GIT_PATH, "objects/%s/" % objhash[:2])
+        paths.GITHACK_DIST_TARGET_GIT_PATH, "objects/%s/" % obj_hash[:2].decode())
     if not os.path.exists(folder):
         mkdir_p(folder)
-    data = readorwget("objects/%s/%s" % (objhash[:2], objhash[2:]))
+    data = read_or_wget("objects/%s/%s" % (obj_hash[:2].decode(), obj_hash[2:].decode()))
     return data
 
 
@@ -269,7 +280,8 @@ def cache_objects():
                 if data:
                     data = zlib.decompress(data)
                     data = re.sub('blob \d+\00', '', data)
-                    target_dir = os.path.join(paths.GITHACK_DIST_TARGET_PATH, os.path.dirname(entry["name"]))
+                    target_dir = os.path.join(
+                        paths.GITHACK_DIST_TARGET_PATH, os.path.dirname(entry["name"]))
                     if target_dir and not os.path.exists(target_dir):
                         os.makedirs(target_dir)
                     with open(os.path.join(paths.GITHACK_DIST_TARGET_PATH, entry["name"]), 'wb') as f:
@@ -288,7 +300,12 @@ def parse_index(filename, pretty=True):
         解析 index 文件
         https://github.com/git/git/blob/master/Documentation/technical/index-format.txt
     """
-    with open(filename, "rb") as o:
+    try:
+        o=open(filename, "rb")
+    except Exception as e:
+        logger.error(e)
+    # with open(filename, "rb") as o:
+    else:
         f = mmap.mmap(o.fileno(), 0, access=mmap.ACCESS_READ)
 
         def read(format):
@@ -306,7 +323,8 @@ def parse_index(filename, pretty=True):
 
         # 4-byte version number
         index["version"] = read("I")
-        check(index["version"] in {2, 3}, "Unsupported version: %s" % index["version"])
+        check(index["version"] in {2, 3},
+              "Unsupported version: %s" % index["version"])
 
         # 32-bit number of index entries, i.e. 4-byte
         index["entries"] = read("I")
@@ -366,11 +384,14 @@ def parse_index(filename, pretty=True):
             if entry["extended"] and (index["version"] == 3):
                 entry["extra-flags"] = read("H")
                 # 1-bit reserved
-                entry["reserved"] = bool(entry["extra-flags"] & (0b10000000 << 8))
+                entry["reserved"] = bool(
+                    entry["extra-flags"] & (0b10000000 << 8))
                 # 1-bit skip-worktree
-                entry["skip-worktree"] = bool(entry["extra-flags"] & (0b01000000 << 8))
+                entry["skip-worktree"] = bool(entry["extra-flags"]
+                                              & (0b01000000 << 8))
                 # 1-bit intent-to-add
-                entry["intent-to-add"] = bool(entry["extra-flags"] & (0b00100000 << 8))
+                entry["intent-to-add"] = bool(entry["extra-flags"]
+                                              & (0b00100000 << 8))
                 # 13-bits unused
                 # used = entry["extra-flags"] & (0b11100000 << 8)
                 # check(not used, "Expected unused bits in extra-flags")

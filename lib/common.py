@@ -77,19 +77,19 @@ def initAgents():
     agents.extend(data)
 
 
-def readFile(filename):
+def readFile(filename:str)->bytes:
     # fileObject = open(filename)
     try:
         with open(filename, "rb") as f:
             retVal = f.read()
     except IOError as ex:
-        errMsg = "something went wrong while trying to read "
+        errMsg = "something went wrong while trying to read \n "
         errMsg += "the input file ('%s')" % ex
-        # raise IOError(errMsg)
+        raise IOError(errMsg)
     return retVal
 
 
-def writeFile(filename, data):
+def writeFile(filename: str, data:bytes):
     try:
         with open(filename, "wb") as f:
             f.write(data)

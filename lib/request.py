@@ -7,7 +7,7 @@ See the file 'LICENCE' for copying permission
 """
 
 import os
-import urllib 
+import urllib.request
 import random
 from lib.common import writeFile
 from lib.data import paths
@@ -21,11 +21,11 @@ def randomAgent():
     return random.choice(agents)
 
 
-def request_data(url):
+def request_data(url:str)->bytes|None:
     for i in range(3):
         data = None
         try:
-            request = urllib.request(url, None, {'User-Agent': randomAgent()})
+            request = urllib.request.Request(url, None, {'User-Agent': randomAgent()})
             data = urllib.request.urlopen(request).read()
             if data:
                 return data
@@ -35,7 +35,7 @@ def request_data(url):
     return None
 
 
-def wget(filepath):
+def wget(filepath: str)->True:
     url = "%s%s" % (target.TARGET_GIT_URL, filepath)
     filename = os.path.join(paths.GITHACK_DIST_TARGET_GIT_PATH, filepath)
     dirname = os.path.dirname(filename)
@@ -46,6 +46,7 @@ def wget(filepath):
         writeFile(filename, data)
         if DEBUG:
             logger.success("Get %s => %s" % (url, filepath))
+    return True
 
 
 def isdirlist():

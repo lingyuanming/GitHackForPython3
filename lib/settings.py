@@ -7,7 +7,7 @@ See the file 'LICENCE' for copying permission
 """
 
 from lib import __version__
-DEBUG = False
+DEBUG = True
 
 VERSION = __version__
 
