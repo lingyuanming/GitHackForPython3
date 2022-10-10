@@ -1,7 +1,9 @@
 # GitHackForPython3
 
 > `.git` 泄漏利用工具，可还原历史版本
-> 主要修改 `git.py` `request.py`,适配Python3
+>
+>
+> 修改 `git.py` `request.py`,适配Python3
 
 ### 依赖
 
